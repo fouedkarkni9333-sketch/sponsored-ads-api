@@ -3,7 +3,7 @@ from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-# قاعدة بيانات مؤقتة في الذاكرة
+# قاعدة بيانات مؤقتة
 database = [
     {
         "id": 1,
@@ -23,10 +23,25 @@ database = [
 @app.route("/items", methods=["GET"])
 def get_items():
   current_date = datetime.now().strftime("%Y-%m-%d")
+
+  # تحديث حالة الإعلانات المنتهية
   for item in database:
     if item["is_sponsored"] and item["expiry_date"] < current_date:
       item["is_sponsored"] = False
-  sorted_items = sorted(database, key=lambda x: x["is_sponsored"], reverse=True)
+
+  # استقبال كلمة البحث من الرابط (إن وجدت) مثل: /items?search=صيانة
+  search_query = request.args.get("search", "").lower()
+
+  filtered_items = database
+  if search_query:
+    filtered_items = [
+        item for item in database if search_query in item["title"].lower()
+    ]
+
+  # ترتيب النتائج: الممولة النشطة أولاً
+  sorted_items = sorted(
+      filtered_items, key=lambda x: x["is_sponsored"], reverse=True
+  )
   return jsonify(sorted_items)
 
 
